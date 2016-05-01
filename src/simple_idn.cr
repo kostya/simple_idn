@@ -58,8 +58,8 @@ module SimpleIdn
     end
 
     # Main decode
-    def self.decode(input)
-      output = [] of Char
+    def self.decode(input : Slice(UInt8))
+      output = Array(Char).new(input.size)
 
       # Initialize the state:
       n = INITIAL_N
@@ -69,12 +69,14 @@ module SimpleIdn
       # Handle the basic code points: Let basic be the number of input code
       # points before the last delimiter, or 0 if there is none, then
       # copy the first basic code points to the output.
-      basic = input.rindex(DELIMITER.chr) || 0
+      basic = input.rindex(DELIMITER) || 0
 
-      input.each_byte.each_with_index do |byte, i|
-        break if i >= basic
-        raise ConversionError.new("Illegal input >= 0x80") if byte >= 0x80
-        output << byte.chr # to_utf8_character not needed her because ord < 0x80 (128) which is within US-ASCII.
+      j = 0
+      while j < {input.size, basic}.min
+        byte = input[j]
+        raise ConversionError.new("Illegal input #{byte} >= 0x80 at #{j}") if byte >= 0x80
+        output << byte.chr
+        j += 1
       end
 
       # Main decoding loop: Start just after the last delimiter if any
@@ -94,7 +96,7 @@ module SimpleIdn
         while true
           raise ConversionError.new("punycode_bad_input(1)") if ic >= input.size
 
-          digit = decode_digit(input[ic].ord)
+          digit = decode_digit(input[ic]).to_i
           ic += 1
 
           raise ConversionError.new("punycode_bad_input(2)") if digit >= BASE
@@ -102,7 +104,7 @@ module SimpleIdn
           raise ConversionError.new("punycode_overflow(1)") if digit > (MAXINT - i) / w
 
           i += digit * w
-          t = k <= bias ? TMIN : k >= bias + TMAX ? TMAX : k - bias
+          t = (k <= bias) ? TMIN : ((k >= bias + TMAX) ? TMAX : (k - bias))
           break if digit < t
           raise ConversionError.new("punycode_overflow(2)") if w > MAXINT / (BASE - t)
 
@@ -125,30 +127,31 @@ module SimpleIdn
         i += 1
       end
 
-      return output.join
+      output.join
     end
 
     # Main encode function
-    def self.encode(input)
-      input = input.chars
-      output = [] of UInt8
-
+    def self.encode(input : String)
       # Initialize the state:
       n = INITIAL_N
       delta = 0
       bias = INITIAL_BIAS
 
       # Handle the basic code points:
-      output = input.select do |char|
-        char.ord if char.ord < 0x80
+      c = 0
+      input.each_byte do |byte|
+        if byte < 0x80_u8
+          yield byte
+          c += 1
+        end
       end
 
-      h = b = output.size
+      h = b = c
 
       # h is the number of code points that have been handled, b is the
       # number of basic code points
 
-      output << DELIMITER.chr if b > 0
+      yield DELIMITER if b > 0
 
       # Main encoding loop:
       while h < input.size
@@ -157,7 +160,7 @@ module SimpleIdn
 
         m = MAXINT
 
-        input.each do |char|
+        input.each_char do |char|
           m = char.ord if char.ord >= n && char.ord < m
         end
 
@@ -169,7 +172,7 @@ module SimpleIdn
         delta += (m - n) * (h + 1)
         n = m
 
-        input.each_with_index do |char, j|
+        input.each_char_with_index do |char, j|
           if char.ord < n
             delta += 1
             raise ConversionError.new("punycode_overflow(2)") if delta > MAXINT
@@ -180,13 +183,13 @@ module SimpleIdn
             q = delta
             k = BASE
             while true
-              t = k <= bias ? TMIN : k >= bias + TMAX ? TMAX : k - bias
+              t = ((k <= bias) ? TMIN : (k >= bias + TMAX) ? TMAX : (k - bias))
               break if q < t
-              output << encode_digit(t + (q - t) % (BASE - t)).chr
+              yield encode_digit(t + (q - t) % (BASE - t)).to_u8
               q = ((q - t) / (BASE - t)).floor
               k += BASE
             end
-            output << encode_digit(q).chr
+            yield encode_digit(q).to_u8
             bias = adapt(delta, h + 1, h == b)
             delta = 0
             h += 1
@@ -196,7 +199,6 @@ module SimpleIdn
         delta += 1
         n += 1
       end
-      return output.join
     end
   end
 
@@ -204,19 +206,66 @@ module SimpleIdn
   # == Example
   #   SimpleIDN.to_ascii("møllerriis.com")
   # => "xn--mllerriis-l8a.com"
-  def self.to_ascii(domain)
-    domain.split(".").map do |s|
-      (s =~ /[^A-Z0-9@\-*_]/i ? "xn--" + Punycode.encode(s).downcase : s)
-    end.join(".")
+  def self.to_ascii(domain : String)
+    String.build do |buf|
+      split_to_slices(domain, '.') do |part, first|
+        buf << '.' unless first
+        if part.any? { |b| !domain_code?(b) }
+          buf << "xn--"
+          Punycode.encode(String.new(part)) do |byte|
+            buf << byte.chr.downcase
+          end
+        else
+          buf.write(part)
+        end
+      end
+    end
   end
 
   # Converts a punycode ACE string to a UTF-8 unicode string.
   # == Example
   #   SimpleIDN.to_unicode("xn--mllerriis-l8a.com")
   # => "møllerriis.com"
-  def self.to_unicode(domain)
-    domain.split(".").map do |s|
-      (s =~ /^xn\-\-/i ? Punycode.decode(s.gsub("xn--", "")) : s)
-    end.join(".")
+  def self.to_unicode(domain : String)
+    String.build do |buf|
+      split_to_slices(domain, '.') do |part, first|
+        buf << '.' unless first
+        if (part.size >= 4) &&
+           (part[0] == 'x'.ord || part[0] == 'X'.ord) &&
+           (part[1] == 'n'.ord || part[1] == 'N'.ord) &&
+           (part[2] == '-'.ord) && (part[3] == '-'.ord)
+          part = Slice.new(part.to_unsafe + 4, part.size - 4)
+          buf << Punycode.decode(part)
+        else
+          buf.write(part)
+        end
+      end
+    end
+  end
+
+  private def self.split_to_slices(str : String, sym : Char)
+    i = 0
+    st = 0
+    strp = str.to_unsafe
+    size = str.bytesize
+    first = true
+    while i < size
+      if strp[i].chr == sym
+        yield Slice.new(strp + st, i - st), first
+        first = false
+        st = i + 1
+      end
+      i += 1
+    end
+    if st < size
+      yield Slice.new(strp + st, i - st), first
+    elsif !first
+      yield Slice.new(strp + st - 1, 0), false
+    end
+  end
+
+  private def self.domain_code?(c : UInt8)
+    ('a'.ord <= c <= 'z'.ord) || ('A'.ord <= c <= 'Z'.ord) || ('0'.ord <= c <= '9'.ord) ||
+      (c == '@'.ord) || (c == '-'.ord) || (c == '*'.ord) || (c == '_'.ord)
   end
 end
