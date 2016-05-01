@@ -7,16 +7,15 @@ module SimpleIdn
   end
 
   module Punycode
-
-    INITIAL_N = 0x80
-    INITIAL_BIAS = 72
-    DELIMITER = 0x2D_u8
-    BASE = 36
-    DAMP = 700
-    TMIN = 1
-    TMAX = 26
-    SKEW = 38
-    MAXINT = 0x7FFFFFFF
+    INITIAL_N    =       0x80
+    INITIAL_BIAS =         72
+    DELIMITER    =    0x2D_u8
+    BASE         =         36
+    DAMP         =        700
+    TMIN         =          1
+    TMAX         =         26
+    SKEW         =         38
+    MAXINT       = 0x7FFFFFFF
 
     # decode_digit(cp) returns the numeric value of a basic code
     # point (for use in representing integers) in the range 0 to
@@ -73,7 +72,7 @@ module SimpleIdn
       basic = input.rindex(DELIMITER.chr) || 0
 
       input.each_byte.each_with_index do |byte, i|
-      	break if i >= basic
+        break if i >= basic
         raise ConversionError.new("Illegal input >= 0x80") if byte >= 0x80
         output << byte.chr # to_utf8_character not needed her because ord < 0x80 (128) which is within US-ASCII.
       end
@@ -177,20 +176,20 @@ module SimpleIdn
           end
 
           if (char.ord == n)
-              # Represent delta as a generalized variable-length integer:
-              q = delta
-              k = BASE
-              while true
-                  t = k <= bias ? TMIN : k >= bias + TMAX ? TMAX : k - bias
-                  break if q < t
-                  output << encode_digit(t + (q - t) % (BASE - t)).chr
-                  q = ( (q - t) / (BASE - t) ).floor
-                  k += BASE
-              end
-              output << encode_digit(q).chr
-              bias = adapt(delta, h + 1, h == b)
-              delta = 0
-              h += 1
+            # Represent delta as a generalized variable-length integer:
+            q = delta
+            k = BASE
+            while true
+              t = k <= bias ? TMIN : k >= bias + TMAX ? TMAX : k - bias
+              break if q < t
+              output << encode_digit(t + (q - t) % (BASE - t)).chr
+              q = ((q - t) / (BASE - t)).floor
+              k += BASE
+            end
+            output << encode_digit(q).chr
+            bias = adapt(delta, h + 1, h == b)
+            delta = 0
+            h += 1
           end
         end
 
@@ -199,13 +198,12 @@ module SimpleIdn
       end
       return output.join
     end
-
   end
 
   # Converts a UTF-8 unicode string to a punycode ACE string.
   # == Example
   #   SimpleIDN.to_ascii("møllerriis.com")
-  #    => "xn--mllerriis-l8a.com"
+  # => "xn--mllerriis-l8a.com"
   def self.to_ascii(domain)
     domain_array = domain.split(".")
     # return domain if domain_array.size == 1
@@ -217,7 +215,7 @@ module SimpleIdn
   # Converts a punycode ACE string to a UTF-8 unicode string.
   # == Example
   #   SimpleIDN.to_unicode("xn--mllerriis-l8a.com")
-  #    => "møllerriis.com"
+  # => "møllerriis.com"
   def self.to_unicode(domain)
     domain_array = domain.split(".")
     # return domain if domain_array.size == 1
