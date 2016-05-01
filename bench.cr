@@ -7,7 +7,7 @@ puts "to_unicode"
 t = Time.now
 str = "xn--mllerriis-l8a.com"
 s = 0
-100000.times do
+500000.times do
   s += SimpleIdn.to_unicode(str).bytesize
 end
 p s
@@ -17,7 +17,7 @@ puts "to_ascii"
 t = Time.now
 str = "møllerriis.com"
 s = 0
-100000.times do
+500000.times do
   s += SimpleIdn.to_ascii(str).bytesize
 end
 p s
