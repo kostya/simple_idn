@@ -205,10 +205,8 @@ module SimpleIdn
   #   SimpleIDN.to_ascii("møllerriis.com")
   # => "xn--mllerriis-l8a.com"
   def self.to_ascii(domain)
-    domain_array = domain.split(".")
-    # return domain if domain_array.size == 1
-    domain_array.map do |s|
-      (s =~ /[^A-Z0-9@\-*_]/i ? "xn--" + Punycode.encode(s) : s).downcase
+    domain.split(".").map do |s|
+      (s =~ /[^A-Z0-9@\-*_]/i ? "xn--" + Punycode.encode(s).downcase : s)
     end.join(".")
   end
 
@@ -217,9 +215,7 @@ module SimpleIdn
   #   SimpleIDN.to_unicode("xn--mllerriis-l8a.com")
   # => "møllerriis.com"
   def self.to_unicode(domain)
-    domain_array = domain.split(".")
-    # return domain if domain_array.size == 1
-    domain_array.map do |s|
+    domain.split(".").map do |s|
       (s =~ /^xn\-\-/i ? Punycode.decode(s.gsub("xn--", "")) : s)
     end.join(".")
   end
