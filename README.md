@@ -1,6 +1,10 @@
 # SimpleIdn
 
-SimpleIdn Crystal language. Translated from Ruby https://github.com/mmriis/simpleidn. 
+SimpleIdn for Crystal language. Translated from Ruby https://github.com/mmriis/simpleidn. 
+
+This shard allows easy conversion from punycode ACE strings to unicode UTF-8 strings and visa versa.
+
+The implementation is heavily based on the RFC3492 C example implementation but simplified since it does not preserve case.
 
 ## Installation
 
