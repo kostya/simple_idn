@@ -204,7 +204,7 @@ module SimpleIdn
 
   # Converts a UTF-8 unicode string to a punycode ACE string.
   # == Example
-  #   SimpleIDN.to_ascii("møllerriis.com")
+  #   SimpleIdn.to_ascii("møllerriis.com")
   # => "xn--mllerriis-l8a.com"
   def self.to_ascii(domain : String)
     String.build do |buf|
@@ -224,7 +224,7 @@ module SimpleIdn
 
   # Converts a punycode ACE string to a UTF-8 unicode string.
   # == Example
-  #   SimpleIDN.to_unicode("xn--mllerriis-l8a.com")
+  #   SimpleIdn.to_unicode("xn--mllerriis-l8a.com")
   # => "møllerriis.com"
   def self.to_unicode(domain : String)
     String.build do |buf|
