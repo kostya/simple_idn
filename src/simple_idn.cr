@@ -207,9 +207,11 @@ module SimpleIdn
   #   SimpleIdn.to_ascii("møllerriis.com")
   # => "xn--mllerriis-l8a.com"
   def self.to_ascii(domain : String)
+    first = true
     String.build do |buf|
-      split_to_slices(domain, '.') do |part, first|
+      domain.split('.') do |part|
         buf << '.' unless first
+        first = false
         if part.any? { |b| !ace_byte?(b) }
           buf << "xn--"
           Punycode.encode(String.new(part)) do |byte|
@@ -227,9 +229,11 @@ module SimpleIdn
   #   SimpleIdn.to_unicode("xn--mllerriis-l8a.com")
   # => "møllerriis.com"
   def self.to_unicode(domain : String)
+    first = true
     String.build do |buf|
-      split_to_slices(domain, '.') do |part, first|
+      domain.split('.') do |part|
         buf << '.' unless first
+        first = false
         if (part.size >= 4) &&
            (part[0] == 'x'.ord || part[0] == 'X'.ord) &&
            (part[1] == 'n'.ord || part[1] == 'N'.ord) &&
@@ -240,27 +244,6 @@ module SimpleIdn
           buf.write(part)
         end
       end
-    end
-  end
-
-  private def self.split_to_slices(str : String, sym : Char)
-    i = 0
-    st = 0
-    strp = str.to_unsafe
-    size = str.bytesize
-    first = true
-    while i < size
-      if strp[i].chr == sym
-        yield Slice.new(strp + st, i - st), first
-        first = false
-        st = i + 1
-      end
-      i += 1
-    end
-    if st < size
-      yield Slice.new(strp + st, i - st), first
-    elsif !first
-      yield Slice.new(strp + st - 1, 0), false
     end
   end
 
