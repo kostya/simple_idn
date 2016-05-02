@@ -210,7 +210,7 @@ module SimpleIdn
     String.build do |buf|
       split_to_slices(domain, '.') do |part, first|
         buf << '.' unless first
-        if part.any? { |b| !domain_code?(b) }
+        if part.any? { |b| !ace_byte?(b) }
           buf << "xn--"
           Punycode.encode(String.new(part)) do |byte|
             buf << byte.chr.downcase
@@ -264,8 +264,10 @@ module SimpleIdn
     end
   end
 
-  private def self.domain_code?(c : UInt8)
-    ('a'.ord <= c <= 'z'.ord) || ('A'.ord <= c <= 'Z'.ord) || ('0'.ord <= c <= '9'.ord) ||
-      (c == '@'.ord) || (c == '-'.ord) || (c == '*'.ord) || (c == '_'.ord)
+  private def self.ace_byte?(b : UInt8)
+    ('a'.ord <= b <= 'z'.ord) ||
+      ('A'.ord <= b <= 'Z'.ord) ||
+      ('0'.ord <= b <= '9'.ord) ||
+      (b == '@'.ord) || (b == '-'.ord) || (b == '*'.ord) || (b == '_'.ord)
   end
 end
