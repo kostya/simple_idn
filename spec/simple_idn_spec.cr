@@ -26,7 +26,7 @@ describe "SimpleIdn" do
     end
 
     it "raises when the input is an invalid ACE" do
-      expect_raises do
+      expect_raises(Exception) do
         SimpleIdn.to_unicode("xn---")
       end
     end
