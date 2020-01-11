@@ -37,7 +37,7 @@ module SimpleIdn
 
     # Bias adaptation function
     def self.adapt(delta, numpoints, firsttime)
-      delta = firsttime ? (delta / DAMP) : (delta >> 1)
+      delta = firsttime ? (delta / DAMP) : (delta.to_i >> 1)
       delta += (delta / numpoints)
 
       k = 0
@@ -123,7 +123,7 @@ module SimpleIdn
         i %= out1
 
         # Insert n at position i of the output:
-        output.insert(i, n.chr)
+        output.insert(i.to_i, n.to_i.chr)
         i += 1
       end
 
