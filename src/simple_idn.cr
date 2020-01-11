@@ -37,15 +37,15 @@ module SimpleIdn
 
     # Bias adaptation function
     def self.adapt(delta, numpoints, firsttime)
-      delta = firsttime ? (delta / DAMP) : (delta >> 1)
-      delta += (delta / numpoints)
+      delta = firsttime ? (delta // DAMP) : (delta >> 1)
+      delta += (delta // numpoints)
 
       k = 0
-      while delta > (((BASE - TMIN) * TMAX) / 2)
-        delta /= BASE - TMIN
+      while delta > (((BASE - TMIN) * TMAX) // 2)
+        delta //= BASE - TMIN
         k += BASE
       end
-      return k + (BASE - TMIN + 1) * delta / (delta + SKEW)
+      return k + (BASE - TMIN + 1) * delta // (delta + SKEW)
     end
 
     # encode_basic(bcp,flag) forces a basic code point to lowercase if flag is zero,
@@ -117,9 +117,9 @@ module SimpleIdn
 
         # i was supposed to wrap around from out to 0,
         # incrementing n each time, so we'll fix that now:
-        raise ConversionError.new("punycode_overflow(3)") if (i / out1) > MAXINT - n
+        raise ConversionError.new("punycode_overflow(3)") if (i // out1) > MAXINT - n
 
-        n += (i / out1)
+        n += (i // out1)
         i %= out1
 
         # Insert n at position i of the output:
