@@ -1,7 +1,9 @@
 name: simple_idn
-version: 0.2
+version: 0.3
 
 authors:
   - Konstantin Makarchev <kostya27@gmail.com>
+
+crystal: "*"
 
 license: MIT
